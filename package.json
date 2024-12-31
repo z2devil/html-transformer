@@ -1,26 +1,29 @@
 {
-  "title": "html2canvas",
-  "name": "html2canvas",
-  "description": "Screenshots with JavaScript",
-  "main": "dist/html2canvas.js",
-  "module": "dist/html2canvas.esm.js",
+  "name": "html-transformer",
+  "description": "基于 html2canvas 实现 html 向编辑器数据的转换",
+  "version": "0.0.0",
+  "main": "dist/index.js",
+  "module": "dist/index.esm.js",
   "typings": "dist/types/index.d.ts",
-  "browser": "dist/html2canvas.js",
-  "version": "1.4.1",
-  "author": {
-    "name": "Niklas von Hertzen",
-    "email": "niklasvh@gmail.com",
-    "url": "https://hertzen.com"
+  "browser": "dist/index.js",
+  "files": [
+    "dist/"
+  ],
+  "scripts": {
+    "prebuild": "rimraf dist/ && rimraf build/ && mkdirp dist && mkdirp build",
+    "build": "tsc --module commonjs && rollup -c rollup.config.ts && npm run build:minify",
+    "build:minify": "uglifyjs --compress --comments /^!/ -o dist/index.min.js --mangle -- dist/index.js",
+    "release": "standard-version",
+    "format": "prettier --write \"{src,scripts}/**/*.ts\"",
+    "lint": "eslint src/**/*.ts --max-warnings 0",
+    "watch": "rollup -c rollup.config.ts -w"
   },
   "engines": {
     "node": ">=8.0.0"
   },
-  "repository": {
-    "type": "git",
-    "url": "git@github.com:niklasvh/html2canvas.git"
-  },
-  "bugs": {
-    "url": "https://github.com/niklasvh/html2canvas/issues"
+  "dependencies": {
+    "css-line-break": "^2.1.0",
+    "text-segmentation": "^1.0.3"
   },
   "devDependencies": {
     "@babel/cli": "^7.4.3",
@@ -80,24 +83,5 @@
     "webpack": "^4.46.0",
     "webpack-cli": "^3.3.12",
     "yargs": "^17.0.1"
-  },
-  "scripts": {
-    "prebuild": "rimraf dist/ && rimraf build/ && mkdirp dist && mkdirp build",
-    "build": "tsc --module commonjs && rollup -c rollup.config.ts && npm run build:create-reftest-list && npm run build:testrunner && npm run build:minify",
-    "build:testrunner": "rollup -c tests/rollup.config.ts",
-    "build:minify": "uglifyjs --compress --comments /^!/ -o dist/html2canvas.min.js --mangle -- dist/html2canvas.js",
-    "build:reftest-result-list": "ts-node scripts/create-reftest-result-list.ts",
-    "build:create-reftest-list": "ts-node scripts/create-reftest-list.ts tests/reftests/ignore.txt build/reftests.ts",
-    "release": "standard-version",
-    "format": "prettier --write \"{src,scripts}/**/*.ts\"",
-    "lint": "eslint src/**/*.ts --max-warnings 0",
-    "watch": "rollup -c rollup.config.ts -w",
-    "start": "ts-node tests/server --port=8080 --cors=8081"
-  },
-  "homepage": "https://html2canvas.hertzen.com",
-  "license": "MIT",
-  "dependencies": {
-    "css-line-break": "^2.1.0",
-    "text-segmentation": "^1.0.3"
   }
 }
