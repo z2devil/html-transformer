@@ -8,40 +8,37 @@ import {
 } from './dom/document-cloner';
 import { isBodyElement, isHTMLElement, parseTree } from './dom/node-parser';
 import { CacheStorage } from './core/cache-storage';
-import {
-  CanvasRenderer,
-  RenderConfigurations,
-  RenderOptions,
-} from './render/canvas/canvas-renderer';
-import { ForeignObjectRenderer } from './render/canvas/foreignobject-renderer';
+import { Transformer, TransformerOptions } from './render/transformer';
 import { Context, ContextOptions } from './core/context';
+import { Editor, Node } from '@acs/slate';
 
 export type Options = CloneOptions &
   WindowOptions &
-  RenderOptions &
+  TransformerOptions &
   ContextOptions & {
     backgroundColor: string | null;
-    foreignObjectRendering: boolean;
     removeContainer?: boolean;
   };
 
-const html2canvas = (
+const htmlTransformer = (
+  editor: Editor,
   element: HTMLElement,
   options: Partial<Options> = {}
-): Promise<HTMLCanvasElement> => {
-  return renderElement(element, options);
+): Promise<Node[]> => {
+  return transformElement(editor, element, options);
 };
 
-export default html2canvas;
+export default htmlTransformer;
 
 if (typeof window !== 'undefined') {
   CacheStorage.setContext(window);
 }
 
-const renderElement = async (
+const transformElement = async (
+  editor: Editor,
   element: HTMLElement,
   opts: Partial<Options>
-): Promise<HTMLCanvasElement> => {
+): Promise<Node[]> => {
   if (!element || typeof element !== 'object') {
     return Promise.reject('Invalid element provided as first argument');
   }
@@ -86,14 +83,12 @@ const renderElement = async (
 
   const context = new Context(contextOptions, windowBounds);
 
-  const foreignObjectRendering = opts.foreignObjectRendering ?? false;
-
   const cloneOptions: CloneConfigurations = {
     allowTaint: opts.allowTaint ?? false,
     onclone: opts.onclone,
     ignoreElements: opts.ignoreElements,
-    inlineImages: foreignObjectRendering,
-    copyStyles: foreignObjectRendering,
+    inlineImages: false,
+    copyStyles: false,
   };
 
   context.logger.debug(
@@ -121,8 +116,8 @@ const renderElement = async (
     opts.backgroundColor
   );
 
-  const renderOptions: RenderConfigurations = {
-    canvas: opts.canvas,
+  const renderOptions: TransformerOptions = {
+    editor,
     backgroundColor,
     scale: opts.scale ?? defaultView.devicePixelRatio ?? 1,
     x: (opts.x ?? 0) + left,
@@ -131,31 +126,25 @@ const renderElement = async (
     height: opts.height ?? Math.ceil(height),
   };
 
-  let canvas;
+  let res: Node[];
 
-  if (foreignObjectRendering) {
-    context.logger.debug(`Document cloned, using foreign object rendering`);
-    const renderer = new ForeignObjectRenderer(context, renderOptions);
-    canvas = await renderer.render(clonedElement);
-  } else {
-    context.logger.debug(
-      `Document cloned, element located at ${left},${top} with size ${width}x${height} using computed rendering`
-    );
+  context.logger.debug(
+    `Document cloned, element located at ${left},${top} with size ${width}x${height} using computed rendering`
+  );
 
-    context.logger.debug(`Starting DOM parsing`);
-    const root = parseTree(context, clonedElement);
+  context.logger.debug(`Starting DOM parsing`);
+  const root = parseTree(context, clonedElement);
 
-    if (backgroundColor === root.styles.backgroundColor) {
-      root.styles.backgroundColor = COLORS.TRANSPARENT;
-    }
-
-    context.logger.debug(
-      `Starting renderer for element at ${renderOptions.x},${renderOptions.y} with size ${renderOptions.width}x${renderOptions.height}`
-    );
-
-    const renderer = new CanvasRenderer(context, renderOptions);
-    canvas = await renderer.render(root);
+  if (backgroundColor === root.styles.backgroundColor) {
+    root.styles.backgroundColor = COLORS.TRANSPARENT;
   }
+
+  context.logger.debug(
+    `Starting renderer for element at ${renderOptions.x},${renderOptions.y} with size ${renderOptions.width}x${renderOptions.height}`
+  );
+
+  const transformer = new Transformer(context, renderOptions);
+  res = await transformer.execute(root);
 
   if (opts.removeContainer ?? true) {
     if (!DocumentCloner.destroy(container)) {
@@ -166,7 +155,7 @@ const renderElement = async (
   }
 
   context.logger.debug(`Finished rendering`);
-  return canvas;
+  return res;
 };
 
 const parseBackgroundColor = (
@@ -194,8 +183,8 @@ const parseBackgroundColor = (
     typeof backgroundColorOverride === 'string'
       ? parseColor(context, backgroundColorOverride)
       : backgroundColorOverride === null
-        ? COLORS.TRANSPARENT
-        : 0xffffffff;
+      ? COLORS.TRANSPARENT
+      : 0xffffffff;
 
   return element === ownerDocument.documentElement
     ? isTransparent(documentBackgroundColor)

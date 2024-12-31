@@ -22,7 +22,7 @@ export const parseTextBounds = (
   styles: CSSParsedDeclaration,
   node: Text
 ): TextBounds[] => {
-  const textList = breakText(value, styles);
+  const textList = [value]; // breakText(value, styles);
   const textBounds: TextBounds[] = [];
   let offset = 0;
   textList.forEach(text => {

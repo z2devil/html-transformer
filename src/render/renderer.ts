@@ -1,5 +1,5 @@
 import { Context } from '../core/context';
-import { RenderConfigurations } from './canvas/canvas-renderer';
+import { RenderConfigurations } from './transformer';
 
 export class Renderer {
   constructor(
