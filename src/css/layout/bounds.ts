@@ -27,15 +27,36 @@ export class Bounds {
   }
 
   static fromDOMRectList(context: Context, domRectList: DOMRectList): Bounds {
-    const domRect = Array.from(domRectList).find(rect => rect.width !== 0);
-    return domRect
-      ? new Bounds(
-          domRect.left + context.windowBounds.left,
-          domRect.top + context.windowBounds.top,
-          domRect.width,
-          domRect.height
-        )
-      : Bounds.EMPTY;
+    const domRects = Array.from(domRectList).filter(rect => rect.width !== 0);
+    if (!domRects.length) {
+      return Bounds.EMPTY;
+    }
+    // return domRect
+    //   ? new Bounds(
+    //       domRect.left + context.windowBounds.left,
+    //       domRect.top + context.windowBounds.top,
+    //       domRect.width,
+    //       domRect.height
+    //     )
+    //   : Bounds.EMPTY;
+    let left = Infinity;
+    let top = Infinity;
+    let right = -Infinity;
+    let bottom = -Infinity;
+    domRects.forEach(domRect => {
+      left = Math.min(left, domRect.left);
+      top = Math.min(top, domRect.top);
+      right = Math.max(right, domRect.right);
+      bottom = Math.max(bottom, domRect.bottom);
+    });
+    const res = new Bounds(
+      left + context.windowBounds.left,
+      top + context.windowBounds.top,
+      right - left,
+      bottom - top
+    );
+    console.log('[ Bounds ]', res);
+    return res;
   }
 
   static EMPTY = new Bounds(0, 0, 0, 0);

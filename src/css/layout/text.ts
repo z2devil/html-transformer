@@ -27,41 +27,40 @@ export const parseTextBounds = (
   let offset = 0;
   textList.forEach(text => {
     if (styles.textDecorationLine.length || text.trim().length > 0) {
-      if (FEATURES.SUPPORT_RANGE_BOUNDS) {
-        const clientRects = createRange(
-          node,
-          offset,
-          text.length
-        ).getClientRects();
-        if (clientRects.length > 1) {
-          const subSegments = segmentGraphemes(text);
-          let subOffset = 0;
-          subSegments.forEach(subSegment => {
-            textBounds.push(
-              new TextBounds(
-                subSegment,
-                Bounds.fromDOMRectList(
-                  context,
-                  createRange(
-                    node,
-                    subOffset + offset,
-                    subSegment.length
-                  ).getClientRects()
-                )
-              )
-            );
-            subOffset += subSegment.length;
-          });
-        } else {
-          textBounds.push(
-            new TextBounds(text, Bounds.fromDOMRectList(context, clientRects))
-          );
-        }
-      } else {
-        const replacementNode = node.splitText(text.length);
-        textBounds.push(new TextBounds(text, getWrapperBounds(context, node)));
-        node = replacementNode;
-      }
+      // if (FEATURES.SUPPORT_RANGE_BOUNDS) {
+      // const clientRects = createRange(
+      //   node,
+      //   offset,
+      //   text.length
+      // ).getClientRects();
+      //   if (clientRects.length > 1) {
+      //     const subSegments = segmentGraphemes(text);
+      //     let subOffset = 0;
+      //     subSegments.forEach(subSegment => {
+      //       textBounds.push(
+      //         new TextBounds(
+      //           subSegment,
+      //           Bounds.fromDOMRectList(
+      //             context,
+      //             createRange(
+      //               node,
+      //               subOffset + offset,
+      //               subSegment.length
+      //             ).getClientRects()
+      //           )
+      //         )
+      //       );
+      //       subOffset += subSegment.length;
+      //     });
+      //   } else {
+      // textBounds.push(
+      //   new TextBounds(text, Bounds.fromDOMRectList(context, clientRects))
+      // );
+      //   }
+      // } else {
+      textBounds.push(new TextBounds(text, getWrapperBounds(context, node)));
+      node = node.splitText(text.length);
+      // }
     } else if (!FEATURES.SUPPORT_RANGE_BOUNDS) {
       node = node.splitText(text.length);
     }
@@ -72,12 +71,20 @@ export const parseTextBounds = (
 };
 
 const getWrapperBounds = (context: Context, node: Text): Bounds => {
+  console.log(
+    '[ getWrapperBounds ]',
+    node,
+    node.parentElement,
+    node.parentNode,
+    context
+  );
   const ownerDocument = node.ownerDocument;
   if (ownerDocument) {
-    const wrapper = ownerDocument.createElement('html2canvaswrapper');
-    wrapper.appendChild(node.cloneNode(true));
     const parentNode = node.parentNode;
     if (parentNode) {
+      // 使用 inline block 元素，可以获取尽可能准确的高度和宽度
+      const wrapper = ownerDocument.createElement('button');
+      wrapper.appendChild(node.cloneNode(true));
       parentNode.replaceChild(wrapper, node);
       const bounds = parseBounds(context, wrapper);
       if (wrapper.firstChild) {
